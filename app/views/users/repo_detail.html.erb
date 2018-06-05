@@ -1,0 +1,56 @@
+<% if current_user.present? %>
+  <div>Repository Details</div>
+	<table class="table">
+  	<tr>
+  		<th>Name</th>
+  		<th>Full Name</th>
+  		<th>Description</th>
+  		<th>Owner</th>
+  	</tr>
+  	<tr>
+  		<td><%=@repo_respons["name"]%></td>
+  		<td><%=@repo_respons["full_name"]%></td>
+  		<td><%=@repo_respons["description"]%></td>
+  		<td><%=@repo_respons["owner"]["login"]%></td>
+  	</tr>
+  </table>
+  <div id="chart"></div>
+  <%data_array=[]%>
+	<%@commit_respons.each do |commit_data|%>
+	  <%#=commit_data["commit"]["committer"]["name"]%>
+	  <%#=commit_data["commit"]["committer"]["email"]%>
+	  <%data_array.push(commit_data["commit"]["committer"]["date"].to_datetime)%>
+	  <%#=commit_data["commit"]["message"]%>
+  <%end%>
+
+  <%#=data_array%>
+
+<% end %>
+
+<style type="text/css">
+#chart div {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 3px;
+}
+</style>
+
+<script type="text/javascript">
+	var chartData = "<%=data_array%>";
+	console.log(chartData);
+
+	var colorMap = d3.interpolateRgb(
+  	d3.rgb('#2ca034'),
+  	d3.rgb('#42f44e')
+	);
+
+	d3.select('#chart')
+	  .selectAll("div")
+	  .data(chartData)
+	  .enter()
+	  .append("div")
+	  .style("background-color", (d)=> {
+	    return d == 0 ? '#eee' : colorMap(d);
+	  })
+</script>

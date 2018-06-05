@@ -1,0 +1,13 @@
+<div class="container">
+	<%if current_user.present? %>
+		<div>List of Github Repository</div>
+	  <table class="table">
+	  	<tr><th>Name</th></tr>
+	    <%@response.each do |user_repo|%>
+	    	<tr><td>	
+	    		<%= link_to user_repo["name"], repo_detail_user_path(current_user,:owner => user_repo["owner"]["login"],:repo => user_repo["name"])%>
+	    	</td></tr>
+	    <%end%>
+	  </table>
+	<% end %>
+</div>

@@ -1,0 +1,6 @@
+<% if current_user.blank? %>
+  <div class="col-md-12" align="center">
+  	<h2>Please Sign In</h2>
+  	<h3><%= link_to 'Sign In with Github', '/auth/github' %></h3>
+  </div>
+<% end %>
