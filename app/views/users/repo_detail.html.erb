@@ -1,56 +1,165 @@
 <% if current_user.present? %>
   <div>Repository Details</div>
-	<table class="table">
-  	<tr>
-  		<th>Name</th>
-  		<th>Full Name</th>
-  		<th>Description</th>
-  		<th>Owner</th>
-  	</tr>
-  	<tr>
-  		<td><%=@repo_respons["name"]%></td>
-  		<td><%=@repo_respons["full_name"]%></td>
-  		<td><%=@repo_respons["description"]%></td>
-  		<td><%=@repo_respons["owner"]["login"]%></td>
-  	</tr>
+  <table class="table">
+    <tr>
+      <th>Name</th>
+      <th>Full Name</th>
+      <th>Description</th>
+      <th>Owner</th>
+    </tr>
+    <tr>
+      <td><%=@repo_respons["name"]%></td>
+      <td><%=@repo_respons["full_name"]%></td>
+      <td><%=@repo_respons["description"]%></td>
+      <td><%=@repo_respons["owner"]["login"]%></td>
+    </tr>
   </table>
-  <div id="chart"></div>
-  <%data_array=[]%>
-	<%@commit_respons.each do |commit_data|%>
-	  <%#=commit_data["commit"]["committer"]["name"]%>
-	  <%#=commit_data["commit"]["committer"]["email"]%>
-	  <%data_array.push(commit_data["commit"]["committer"]["date"].to_datetime)%>
-	  <%#=commit_data["commit"]["message"]%>
-  <%end%>
-
-  <%#=data_array%>
-
+  <%data_array = []%>
+    <%@commit_respons.each_with_index do |commit_data,i|%>
+      <%data_array.push(commit_data["commit"]["committer"]["date"])%>
+    <%end%>
 <% end %>
 
-<style type="text/css">
-#chart div {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-right: 3px;
-}
+<div>
+  <div id="graph" class="aGraph" style="position:absolute;top:0px;left:0; float:left;"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+
+<style>
+  * {
+      padding: 0;
+      margin: 0;
+  }
+
+  html, body {
+      height: 100%;
+  }
+
+  path {
+      fill: none;
+      stroke: black;
+  }
+
+  svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+  }
+
+  svg .data-point {
+      stroke: blue;
+      stroke-width: 1.5px;
+      fill: blue;        
+  }
+
+  svg .data-point-text {
+      font-family: sans-serif;
+      font-size: 11px;
+      fill: red;
+  }
+
+  svg .axis path, 
+  svg .axis line {
+      fill: none;
+      stroke: black;
+  }
+
+  svg .axis text {
+      font-family: sans-serif;
+      font-size: 11px;
+  }
 </style>
 
-<script type="text/javascript">
-	var chartData = "<%=data_array%>";
-	console.log(chartData);
+<script>
+   // Define the resolution
+  var width = 1050;
+  var height = 250;    
 
-	var colorMap = d3.interpolateRgb(
-  	d3.rgb('#2ca034'),
-  	d3.rgb('#42f44e')
-	);
+  // Create the SVG 'canvas'
+  var svg = d3.select("body")
+      .append("svg")
+      .attr("viewBox", "0 0 " + width + " " + height)
 
-	d3.select('#chart')
-	  .selectAll("div")
-	  .data(chartData)
-	  .enter()
-	  .append("div")
-	  .style("background-color", (d)=> {
-	    return d == 0 ? '#eee' : colorMap(d);
-	  })
+  // get the data
+  var data_array = <%=data_array.inspect.html_safe%>;
+  
+  var dataset = [];
+
+  for (var i = 0; i < data_array.length; i++) 
+  {
+    console.log(data_array[i]);
+    dataset.push({date: new Date(data_array[i]), value: i+1})
+  }
+
+  console.log(dataset);
+
+  // Define the padding around the graph
+  var padding = 50;
+
+  // Set the scales
+  var minDate = d3.min(dataset, function(d) { return d.date; });
+  minDate.setDate(minDate.getDate() - 1);
+
+  var maxDate = d3.max(dataset, function(d) { return d.date; });
+
+  var xScale = d3.time.scale()
+      .domain([minDate, maxDate])
+      .range([padding, width - padding]);
+
+  var yScale = d3.scale.linear()
+      .domain([0, d3.max(dataset, function(d) { return d.value; })])
+      .range([height - padding, padding]);
+
+  // x-axis
+  var format = d3.time.format("%d %b");
+  var xAxis = d3.svg.axis()
+      .scale(xScale)
+      .orient("bottom")
+      .tickFormat(format)
+      .ticks(d3.time.days, 1);
+
+  svg.append("g")
+      .attr("class", "axis x-axis")
+      .attr("transform", "translate(0," + (height - padding) + ")")
+      .call(xAxis);
+
+  // y-axis
+  var yAxis = d3.svg.axis()
+      .scale(yScale)
+      .orient("left")
+      .tickFormat(function (d) { return d; })
+      .tickSize(5, 5, 0)
+      .ticks(5); // set rough # of ticks
+
+  svg.append("g")
+      .attr("class", "axis y-axis")
+      .attr("transform", "translate(" + padding + ",0)")
+      .call(yAxis);
+
+  // draw line graph
+  var line = d3.svg.line()
+      .x(function(d) { 
+          return xScale(d.date); 
+      })
+      .y(function(d) { 
+          return yScale(d.value); 
+      });
+
+  svg.append("svg:path").attr("d", line(dataset));
+
+  // plot circles
+  svg.selectAll("circle")
+      .data(dataset)
+      .enter()
+      .append("circle")
+      .attr("class", "data-point")
+      .attr("cx", function(d) { 
+          return xScale(d.date);
+      })
+      .attr("cy", function(d) {
+          return yScale(d.value);
+      })
+      .attr("r", 5);
 </script>
+
